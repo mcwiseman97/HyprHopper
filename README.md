@@ -48,11 +48,16 @@ Or use any other Node ≥ 20 install (nvm, n, system package).
 ./install.sh
 ```
 
-`install.sh` runs a preflight check before building and prints a clear error
-for each missing tool. If the terminal closes before you can read the output,
-the full build log is always written to `/tmp/hyprhopper-install.log`.
+By default this downloads the latest pre-built binary from GitHub Releases (~5 s, only needs `curl`).
+If no release exists yet, or if you pass `--build`, it compiles from source instead (~10 min — requires the full toolchain from the Prerequisites section above).
 
-This builds the Tauri release binary and copies:
+```bash
+./install.sh --build   # force compile from source
+```
+
+If the terminal closes before you can read the output, the full log is always at `/tmp/hyprhopper-install.log`.
+
+This installs:
 
 - `~/.local/bin/hyprhopper` — the app
 - `~/.local/bin/hopper-capture` — convenience wrapper used by the keybind
