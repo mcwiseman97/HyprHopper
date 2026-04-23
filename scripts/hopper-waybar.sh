@@ -2,48 +2,69 @@
 #
 # hopper-waybar.sh — emits Waybar custom-module JSON with the HyprHopper backlog.
 #
-# Queries the same SQLite DB HyprHopper writes to, directly. Waybar polls this
-# script (on interval + on signal) so the bar stays in sync even if the app
-# isn't actively running.
+# Usage:
+#   hopper-waybar.sh             # "active" backlog: Now + Queue counts
+#   hopper-waybar.sh study       # Study (dig_deeper) count only
 #
 # Output classes:
-#   empty           - no unreviewed items
-#   has-items       - one or more "I'll get to it" items, no Important
-#   has-important   - at least one Important item
+#   active mode:
+#     empty          - no unreviewed items
+#     has-items      - 1+ Queue items, no Now items
+#     has-important  - 1+ Now items
+#   study mode:
+#     empty          - no Study items
+#     has-items      - 1+ Study items
 
 set -eu
 
+MODE="${1:-active}"
 DB_PATH="${XDG_DATA_HOME:-$HOME/.local/share}/com.hyprhopper.app/hopper.db"
 
-# If the DB doesn't exist yet (first run, app never launched), emit empty.
+# No DB yet = empty. Covers first run before the app has ever launched.
 if [[ ! -f "$DB_PATH" ]]; then
   printf '{"text":"","class":"empty"}\n'
   exit 0
 fi
 
-IMPORTANT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM items WHERE status = 'important';" 2>/dev/null || echo 0)
-BACKLOG=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM items WHERE status = 'backlog';" 2>/dev/null || echo 0)
-TOTAL=$((IMPORTANT + BACKLOG))
+count_where() {
+  sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM items WHERE $1;" 2>/dev/null || echo 0
+}
 
-if [[ "$TOTAL" -eq 0 ]]; then
-  printf '{"text":"","class":"empty"}\n'
-  exit 0
-fi
+case "$MODE" in
+  study)
+    STUDY=$(count_where "status = 'dig_deeper'")
+    if [[ "$STUDY" -eq 0 ]]; then
+      printf '{"text":"","class":"empty"}\n'
+    else
+      TOOLTIP="$STUDY to Study"
+      printf '{"text":"%d","tooltip":"%s","class":"has-items"}\n' "$STUDY" "$TOOLTIP"
+    fi
+    ;;
 
-if [[ "$IMPORTANT" -gt 0 && "$BACKLOG" -gt 0 ]]; then
-  TOOLTIP="$IMPORTANT Important · $BACKLOG I'll Get To"
-elif [[ "$IMPORTANT" -gt 0 ]]; then
-  TOOLTIP="$IMPORTANT Important"
-else
-  TOOLTIP="$BACKLOG I'll Get To"
-fi
+  active|*)
+    IMPORTANT=$(count_where "status = 'important'")
+    BACKLOG=$(count_where "status = 'backlog'")
+    TOTAL=$((IMPORTANT + BACKLOG))
 
-if [[ "$IMPORTANT" -gt 0 ]]; then
-  CLASS="has-important"
-else
-  CLASS="has-items"
-fi
+    if [[ "$TOTAL" -eq 0 ]]; then
+      printf '{"text":"","class":"empty"}\n'
+      exit 0
+    fi
 
-# printf handles escaping: TOOLTIP has an apostrophe in "I'll" which is JSON-safe,
-# and none of our other values contain quotes or backslashes.
-printf '{"text":"%d","tooltip":"%s","class":"%s"}\n' "$TOTAL" "$TOOLTIP" "$CLASS"
+    if [[ "$IMPORTANT" -gt 0 && "$BACKLOG" -gt 0 ]]; then
+      TOOLTIP="$IMPORTANT Now · $BACKLOG Queued"
+    elif [[ "$IMPORTANT" -gt 0 ]]; then
+      TOOLTIP="$IMPORTANT Now"
+    else
+      TOOLTIP="$BACKLOG Queued"
+    fi
+
+    if [[ "$IMPORTANT" -gt 0 ]]; then
+      CLASS="has-important"
+    else
+      CLASS="has-items"
+    fi
+
+    printf '{"text":"%d","tooltip":"%s","class":"%s"}\n' "$TOTAL" "$TOOLTIP" "$CLASS"
+    ;;
+esac

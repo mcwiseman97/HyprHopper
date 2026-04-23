@@ -6,11 +6,51 @@ One keybind drops anything — URLs, text snippets, images, files, notes — int
 
 The UI mirrors whatever Omarchy theme is active and recolors live when you switch themes.
 
+## Prerequisites
+
+These must be present on the machine before running `install.sh`.
+
+**System packages (Arch / Omarchy):**
+
+```bash
+sudo pacman -S webkit2gtk-4.1 gtk3 librsvg openssl sqlite wl-clipboard base-devel
+```
+
+**Rust toolchain:**
+
+```bash
+curl https://sh.rustup.rs -sSf | sh
+# then start a new shell, or: source "$HOME/.cargo/env"
+```
+
+**Tauri CLI:**
+
+```bash
+cargo install tauri-cli --version '^2.0'
+# takes a few minutes on first install
+```
+
+**Node.js — via mise (Omarchy's default):**
+
+```bash
+# If mise is installed but Node isn't yet:
+mise install node@lts
+mise use --global node@lts
+```
+
+Or use any other Node ≥ 20 install (nvm, n, system package).
+
+---
+
 ## Install
 
 ```bash
 ./install.sh
 ```
+
+`install.sh` runs a preflight check before building and prints a clear error
+for each missing tool. If the terminal closes before you can read the output,
+the full build log is always written to `/tmp/hyprhopper-install.log`.
 
 This builds the Tauri release binary and copies:
 
