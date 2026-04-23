@@ -73,7 +73,7 @@ NEXT STEPS — things you add by hand (install.sh never edits your configs)
          "interval": 60,
          "signal": 11,
          "on-click": "hyprhopper feed",
-         "format": "󰋳 {}",
+         "format": "🗒 {}",
          "tooltip": true
      }
 
@@ -84,6 +84,7 @@ NEXT STEPS — things you add by hand (install.sh never edits your configs)
 
      #custom-hopper {
          padding: 0 10px;
+         padding-top: 5px;
          margin: 0 4px;
          border-radius: 4px;
          color: @foreground;
