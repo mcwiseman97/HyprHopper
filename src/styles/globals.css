@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+/*
+ * Bridge the Omarchy-derived CSS custom properties (--hh-*) into Tailwind v4's
+ * design-token registry so utilities like `bg-surface`, `text-on-surface`,
+ * `ring-focus`, etc. resolve to live theme colors.
+ *
+ * The `--hh-*` values themselves are written to :root at runtime by useTheme.ts.
+ * Defaults below are only a fallback for the brief moment before the first
+ * Tauri invoke resolves — they roughly match matte-black so nothing flashes
+ * white.
+ */
+@theme {
+  --color-surface: var(--hh-surface);
+  --color-surface-container: var(--hh-surface-container);
+  --color-surface-container-high: var(--hh-surface-container-high);
+  --color-on-surface: var(--hh-on-surface);
+  --color-on-surface-muted: var(--hh-on-surface-muted);
+  --color-primary: var(--hh-primary);
+  --color-on-primary: var(--hh-on-primary);
+  --color-outline: var(--hh-outline);
+  --color-outline-variant: var(--hh-outline-variant);
+  --color-important: var(--hh-important);
+  --color-on-important: var(--hh-on-important);
+  --color-destructive: var(--hh-destructive);
+  --color-focus-ring: var(--hh-focus-ring);
+}
+
+:root {
+  /* Fallback defaults match matte-black with alpha so the first paint doesn't
+   * flash opaque. Rust overwrites these via <style id="omarchy-theme"> on mount. */
+  --hh-surface: rgb(18 18 18 / 0.85);
+  --hh-surface-container: rgb(28 28 28 / 0.94);
+  --hh-surface-container-high: #272727;
+  --hh-on-surface: #bebebe;
+  --hh-on-surface-muted: rgb(190 190 190 / 0.60);
+  --hh-primary: #e68e0d;
+  --hh-on-primary: #000000;
+  --hh-outline: #8a8a8d;
+  --hh-outline-variant: rgb(138 138 141 / 0.40);
+  --hh-important: #d35f5f;
+  --hh-on-important: #ffffff;
+  --hh-destructive: #d35f5f;
+  --hh-focus-ring: rgb(230 142 13 / 0.40);
+
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* Let the Tauri transparent window (and Hyprland blur) show through. */
+html,
+body {
+  background-color: transparent;
+}
+
+body {
+  margin: 0;
+  color: var(--hh-on-surface);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
