@@ -2,94 +2,133 @@
 
 A local-first, Wayland-native capture inbox for Omarchy Linux.
 
-One keybind drops anything — URLs, text snippets, images, files, notes — into a SQLite DB that lives in `~/.local/share/com.hyprhopper.app/`. A Waybar widget shows the unreviewed count. Click it to triage.
+One keybind saves anything — URLs, text snippets, images, files, notes — into a SQLite DB. A Waybar widget shows the unreviewed count. Click it to triage.
 
-The UI mirrors whatever Omarchy theme is active and recolors live when you switch themes.
-
-## Prerequisites
-
-These must be present on the machine before running `install.sh`.
-
-**System packages (Arch / Omarchy):**
-
-```bash
-sudo pacman -S webkit2gtk-4.1 gtk3 librsvg openssl sqlite wl-clipboard base-devel
-```
-
-**Rust toolchain:**
-
-```bash
-curl https://sh.rustup.rs -sSf | sh
-# then start a new shell, or: source "$HOME/.cargo/env"
-```
-
-**Tauri CLI:**
-
-```bash
-cargo install tauri-cli --version '^2.0'
-# takes a few minutes on first install
-```
-
-**Node.js — via mise (Omarchy's default):**
-
-```bash
-# If mise is installed but Node isn't yet:
-mise install node@lts
-mise use --global node@lts
-```
-
-Or use any other Node ≥ 20 install (nvm, n, system package).
+The UI mirrors your active Omarchy theme and recolors live when you switch themes.
 
 ---
 
 ## Install
 
 ```bash
-./install.sh
+curl -fsSL https://raw.githubusercontent.com/mcwiseman97/HyprHopper/main/install.sh | bash
 ```
 
-By default this downloads the latest pre-built binary from GitHub Releases (~5 s, only needs `curl`).
-If no release exists yet, or if you pass `--build`, it compiles from source instead (~10 min — requires the full toolchain from the Prerequisites section above).
+No repo to clone, no compiler needed. Downloads the pre-built binary and scripts directly.
+
+**Runtime requirements** — most Omarchy setups already have these:
 
 ```bash
-./install.sh --build   # force compile from source
+sudo pacman -S webkit2gtk-4.1 wl-clipboard
 ```
 
-If the terminal closes before you can read the output, the full log is always at `/tmp/hyprhopper-install.log`.
+(`webkit2gtk-4.1` is required for the app to launch. `wl-clipboard` is required for clipboard capture.)
 
-This installs:
+After install, the script prints the exact lines to add to your Hyprland and Waybar configs. It never edits your config files — you add the lines yourself.
 
-- `~/.local/bin/hyprhopper` — the app
-- `~/.local/bin/hopper-capture` — convenience wrapper used by the keybind
-- `~/.config/waybar/scripts/hopper-waybar.sh` — the Waybar custom-module script
+---
 
-It does **not** touch your Hyprland or Waybar configs. After the build, the installer prints the exact lines you need to paste into:
+## After install
 
-- `~/.config/hypr/hyprland.conf` — the `exec-once = hyprhopper` autostart
-- `~/.config/hypr/keybindings.conf` — the capture hotkey
-- `~/.config/waybar/config` — the custom module definition
-- `~/.config/waybar/style.css` — styling for the module
+**1. Autostart** — add to `~/.config/hypr/hyprland.conf`:
+```
+exec-once = hyprhopper
+```
 
-Then:
+**2. Capture keybind** — add to `~/.config/hypr/keybindings.conf`:
+```
+bind = SUPER SHIFT, S, exec, hyprhopper capture
+```
 
+**3. Waybar module** — add to `~/.config/waybar/config`:
+```json
+"custom/hopper": {
+    "exec": "~/.config/waybar/scripts/hopper-waybar.sh",
+    "return-type": "json",
+    "interval": 60,
+    "signal": 11,
+    "on-click": "hyprhopper feed",
+    "format": "🗒 {}",
+    "tooltip": true
+}
+```
+Then add `"custom/hopper"` to one of the `modules-*` arrays.
+
+**4. Waybar style** — add to `~/.config/waybar/style.css`:
+```css
+#custom-hopper {
+    padding: 0 10px;
+    padding-top: 5px;
+    margin: 0 4px;
+    border-radius: 4px;
+    color: @foreground;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+#custom-hopper.empty {
+    padding: 0; margin: 0; min-width: 0; color: transparent;
+}
+#custom-hopper.has-important {
+    font-weight: 700;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+```
+
+**5. Reload:**
 ```bash
 omarchy-restart-waybar
 hyprctl reload
 ```
 
+---
+
 ## Usage
 
-- **Capture** — the keybind you wired up (suggested: `SUPER + SHIFT + S`). Opens a small floating dialog pre-filled from the clipboard.
-- **Feed** — click the Waybar widget, or run `hyprhopper feed`. Lists items with filter tabs (All / Important / I'll get to it / Reviewed), search, and per-item actions (Open, Preview, Edit, status change, Delete).
+- **Capture** (`SUPER + SHIFT + S`) — small floating dialog, pre-filled from clipboard. Saves URLs, text, notes, images, or files with optional tags and priority.
+- **Feed** — click the Waybar widget or run `hyprhopper feed`. Filter tabs (All / Important / I'll get to it / Reviewed), search, and per-item actions (Open, Preview, Edit, Delete, status change).
+
+---
+
+## Data
+
+All items live in:
+```
+~/.local/share/com.hyprhopper.app/hopper.db
+```
+
+Plain SQLite — back it up however you handle `~/.local/share`.
+
+---
 
 ## Development
+
+Clone the repo, then:
 
 ```bash
 npm install
 npm run tauri dev
 ```
 
-The app compiles all Rust + webview assets on first run (~30 s). Subsequent dev builds are incremental.
+To build a release binary locally:
+
+```bash
+./install.sh --build
+```
+
+This compiles from source and requires the full toolchain:
+
+```bash
+# System packages
+sudo pacman -S webkit2gtk-4.1 gtk3 librsvg openssl sqlite wl-clipboard base-devel
+
+# Rust
+curl https://sh.rustup.rs -sSf | sh
+
+# Tauri CLI
+cargo install tauri-cli --version '^2.0'
+
+# Node.js (via mise)
+mise install node@lts && mise use --global node@lts
+```
 
 Run the Rust tests:
 
@@ -97,26 +136,8 @@ Run the Rust tests:
 cd src-tauri && cargo test
 ```
 
-## Data
-
-All captured items live in a single SQLite database at:
-
-```
-~/.local/share/com.hyprhopper.app/hopper.db
-```
-
-It's a plain SQLite file. Back it up however you back up the rest of `~/.local/share`. The Waybar script and the app read from the same file — no IPC is involved in the count display.
-
-## Theming
-
-HyprHopper reads `~/.config/omarchy/current/theme/colors.toml` at startup and on every theme change (it watches `~/.config/omarchy/current/theme.name` for modifications). It synthesizes semantic CSS custom properties (`--hh-surface`, `--hh-primary`, `--hh-important`, etc.) from Omarchy's flat 16-color + accent/foreground/background palette.
-
-Switching themes with `omarchy-theme-set <name>` recolors the app instantly — no restart.
+---
 
 ## Stack
 
-- **Tauri v2** (Rust backend, WebView frontend)
-- **React 19 + TypeScript + Vite 8**
-- **Tailwind CSS v4** (CSS-first `@theme` with runtime-injected vars)
-- **SQLite** via `rusqlite` (bundled)
-- **lucide-react** for icons
+- **Tauri v2** · **React 19 + TypeScript + Vite** · **Tailwind CSS v4** · **SQLite** (rusqlite, bundled) · **lucide-react**

@@ -59,11 +59,31 @@ if [[ "$BUILD_FROM_SOURCE" != "true" ]]; then
     yellow "No pre-built release found yet — falling back to building from source."
     BUILD_FROM_SOURCE=true
   else
-    mkdir -p "$BIN_DIR"
+    mkdir -p "$BIN_DIR" "$WAYBAR_SCRIPTS_DIR"
+
     cyan "▸ Downloading $DOWNLOAD_URL"
-    curl -L --progress-bar "$DOWNLOAD_URL" -o "$BIN_DIR/hyprhopper"
+    curl -fL --progress-bar "$DOWNLOAD_URL" -o "$BIN_DIR/hyprhopper"
     chmod +x "$BIN_DIR/hyprhopper"
+
+    RAW="https://raw.githubusercontent.com/$REPO/main/scripts"
+    curl -fsSL "$RAW/hopper-capture.sh" -o "$BIN_DIR/hopper-capture"
+    chmod +x "$BIN_DIR/hopper-capture"
+    curl -fsSL "$RAW/hopper-waybar.sh"  -o "$WAYBAR_SCRIPTS_DIR/hopper-waybar.sh"
+    chmod +x "$WAYBAR_SCRIPTS_DIR/hopper-waybar.sh"
+
     green "✓ Downloaded: $BIN_DIR/hyprhopper"
+
+    # Runtime dependency warnings (app won't launch without webkit2gtk-4.1).
+    if command -v pacman >/dev/null 2>&1; then
+      if ! pacman -Q webkit2gtk-4.1 >/dev/null 2>&1; then
+        yellow "⚠  webkit2gtk-4.1 is not installed — HyprHopper will not launch without it."
+        yellow "    Fix: sudo pacman -S webkit2gtk-4.1"
+      fi
+      if ! pacman -Q wl-clipboard >/dev/null 2>&1; then
+        yellow "⚠  wl-clipboard is not installed — clipboard capture will not work."
+        yellow "    Fix: sudo pacman -S wl-clipboard"
+      fi
+    fi
   fi
 fi
 
@@ -128,17 +148,12 @@ if [[ "$BUILD_FROM_SOURCE" == "true" ]]; then
     exit 1
   fi
 
-  mkdir -p "$BIN_DIR"
-  install -m 0755 "$RELEASE_BIN" "$BIN_DIR/hyprhopper"
+  mkdir -p "$BIN_DIR" "$WAYBAR_SCRIPTS_DIR"
+  install -m 0755 "$RELEASE_BIN"              "$BIN_DIR/hyprhopper"
+  install -m 0755 "scripts/hopper-capture.sh" "$BIN_DIR/hopper-capture"
+  install -m 0755 "scripts/hopper-waybar.sh"  "$WAYBAR_SCRIPTS_DIR/hopper-waybar.sh"
   green "✓ Built and installed: $BIN_DIR/hyprhopper"
 fi
-
-# ── Install scripts ───────────────────────────────────────────────────────────
-
-cyan "▸ Installing scripts…"
-mkdir -p "$WAYBAR_SCRIPTS_DIR"
-install -m 0755 "scripts/hopper-capture.sh" "$BIN_DIR/hopper-capture"
-install -m 0755 "scripts/hopper-waybar.sh"  "$WAYBAR_SCRIPTS_DIR/hopper-waybar.sh"
 
 green "✓ Installed:"
 echo "    $BIN_DIR/hyprhopper"
